@@ -1,0 +1,45 @@
+root@terraform:~# vi main.tf
+
+     user        = "root"
+     private_key = file("/root/.ssh/id_rsa")
+    }
+  provisioner "file" {
+    source      = "${path.module}/network-configurator-2.script"
+    destination = "/root/network-configurator.script"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /root/network-configurator.script",
+      "/root/network-configurator.script"
+    ]
+  }
+}
+
+resource "metal_port_vlan_attachment" "attach-vlan-s1" {
+  device_id = metal_device.server1.id
+  port_name = "bond0"
+  vlan_vnid = metal_vlan.vlan1.vxlan
+}
+
+resource "metal_port_vlan_attachment" "attach-vlan-s2" {
+  device_id = metal_device.server2.id
+  port_name = "bond0"
+  vlan_vnid = metal_vlan.vlan1.vxlan
+}
+
+resource "null_resource" "clean-up-1" {
+  provisioner "local-exec" {
+    command = "rm network-configurator-1.script"
+  }
+  depends_on = [
+    null_resource.configure-network-server1
+  ]
+}
+
+resource "null_resource" "clean-up-2" {
+  provisioner "local-exec" {
+    command = "rm network-configurator-2.script"
+  }
+  depends_on = [
+    null_resource.configure-network-server2
+  ]
