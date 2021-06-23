@@ -1,5 +1,80 @@
-root@terraform:~# vi main.tf
+terraform {
+  required_providers {
+    metal = {
+      source = "equinix/metal"
+      # version = "1.0.0"
+    }
+  }
+}
 
+provider "metal" {
+  auth_token = "R8EyN5HRLSS6DXFtxbV1PiPoePGRDxj5"
+}
+
+resource "metal_project" "project" {
+  name = "adanskin project"
+}
+
+resource "metal_vlan" "vlan1" {
+  description = "TF VLAN"
+  facility    = "dc13"
+  project_id  = "b0389d5f-0f60-4075-9f9b-475a0c8a65ce"
+}
+
+resource "null_resource" "build-bash-script-1" {
+  provisioner "local-exec" {
+    command = format("echo '#!/bin/bash\napt update\napt install vlan\nmodprobe 8021q\necho \"8021q\" >> /etc/modules-load.d/networking.conf\nip link add link bond0 name bond0.%g type vlan id %g\nip addr add 192.168.100.1/24 brd 192.168.100.255 dev bond0.%g\nip link set dev bond0.%g up' > network-configurator-1.script", metal_vlan.vlan1.vxlan, metal_vlan.vlan1.vxlan, metal_vlan.vlan1.vxlan, metal_vlan.vlan1.vxlan)
+  }
+}
+
+resource "null_resource" "build-bash-script-2" {
+  provisioner "local-exec" {
+    command = format("echo '#!/bin/bash\napt update\napt install vlan\nmodprobe 8021q\necho \"8021q\" >> /etc/modules-load.d/networking.conf\nip link add link bond0 name bond0.%g type vlan id %g\nip addr add 192.168.100.2/24 brd 192.168.100.255 dev bond0.%g\nip link set dev bond0.%g up' > network-configurator-2.script", metal_vlan.vlan1.vxlan, metal_vlan.vlan1.vxlan, metal_vlan.vlan1.vxlan, metal_vlan.vlan1.vxlan)
+  }
+}
+
+resource "metal_device" "server1" {
+  hostname         = "first-tf-server"
+  plan             = "c3.medium.x86"
+  facilities       = ["dc13"]
+  operating_system = "ubuntu_18_04"
+  billing_cycle    = "hourly"
+  project_id       = "b0389d5f-0f60-4075-9f9b-475a0c8a65ce"
+}
+
+resource "metal_device" "server2" {
+  hostname         = "second-tf-server"
+  plan             = "c3.medium.x86"
+  facilities       = ["dc13"]
+  operating_system = "ubuntu_18_04"
+  billing_cycle    = "hourly"
+  project_id       = "b0389d5f-0f60-4075-9f9b-475a0c8a65ce"
+
+}
+
+resource "null_resource" "configure-network-server1" {
+  connection {
+     host        = metal_device.server1.access_public_ipv4
+     type        = "ssh"
+     user        = "root"
+     private_key = file("/root/.ssh/id_rsa")
+    }
+  provisioner "file" {
+    source      = "${path.module}/network-configurator-1.script"
+    destination = "/root/network-configurator.script"
+  }
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /root/network-configurator.script",
+      "/root/network-configurator.script"
+    ]
+  }
+}
+
+resource "null_resource" "configure-network-server2" {
+  connection {
+     host        = metal_device.server2.access_public_ipv4
+     type        = "ssh"
      user        = "root"
      private_key = file("/root/.ssh/id_rsa")
     }
@@ -43,3 +118,4 @@ resource "null_resource" "clean-up-2" {
   depends_on = [
     null_resource.configure-network-server2
   ]
+}
