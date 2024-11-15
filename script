@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "metal" {
-  auth_token = "R8EyN5HRLSS6DXFtxbV1PiPoePGRDxj5"
+  auth_token = "my_auth_key"
 }
 
 resource "metal_project" "project" {
@@ -18,7 +18,7 @@ resource "metal_project" "project" {
 resource "metal_vlan" "vlan1" {
   description = "TF VLAN"
   facility    = "dc13"
-  project_id  = "b0389d5f-0f60-4075-9f9b-475a0c8a65ce"
+  project_id  = "my_project_ID"
 }
 
 resource "null_resource" "build-bash-script-1" {
@@ -39,7 +39,7 @@ resource "metal_device" "server1" {
   facilities       = ["dc13"]
   operating_system = "ubuntu_18_04"
   billing_cycle    = "hourly"
-  project_id       = "b0389d5f-0f60-4075-9f9b-475a0c8a65ce"
+  project_id       = "my_project_ID"
 }
 
 resource "metal_device" "server2" {
@@ -48,7 +48,7 @@ resource "metal_device" "server2" {
   facilities       = ["dc13"]
   operating_system = "ubuntu_18_04"
   billing_cycle    = "hourly"
-  project_id       = "b0389d5f-0f60-4075-9f9b-475a0c8a65ce"
+  project_id       = "my_project_ID"
 
 }
 
